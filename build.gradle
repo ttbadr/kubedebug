@@ -1,0 +1,59 @@
+plugins {
+    id 'groovy'
+    id 'maven-publish'
+    id 'java-gradle-plugin'
+}
+
+group 'com.mk.kube'
+version '0.3.1'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    implementation 'io.fabric8:kubernetes-client:5.10.1'
+    implementation 'cn.hutool:hutool-core:5.7.17'
+    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'org.apache.commons:commons-compress:1.21'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+wrapper {
+    gradleVersion = '4.10.3'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            credentials {
+                username 'cms'
+                password 'cms1234'
+            }
+            url 'http://la-nexus.tandbergtv.lan:8081/repository/cms'
+        }
+    }
+}
+
+gradlePlugin {
+    plugins {
+        kubeDebug {
+            id = 'com.mk.kube.debug'
+            implementationClass = 'com.mk.kube.debug.KubeDebugPlugin'
+        }
+    }
+}
