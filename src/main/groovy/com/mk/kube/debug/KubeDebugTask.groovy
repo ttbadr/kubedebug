@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit
 
 class KubeDebugTask extends DefaultTask {
     boolean restore = false
-    boolean restart = false
+    boolean debug = true
     boolean uploadFilesOnly = false
 
     NamedDomainObjectContainer<UploadConfig> uploads
@@ -82,7 +82,7 @@ class KubeDebugTask extends DefaultTask {
         }
         uploadFiles()
 
-        if (restart) {
+        if (!debug) {
             k8sClient.apps().deployments().withName(deployment.name).scale(0)
             TimeUnit.SECONDS.sleep(2)
             k8sClient.apps().deployments().withName(deployment.name).scale(deploy.spec.replicas)
