@@ -1,7 +1,7 @@
 package com.mk.kube.debug.config
 
 class DeployConfig {
-    String deployName
+    String name
     boolean readOnly = true
     boolean runAsRoot = false
     int replicas = 1

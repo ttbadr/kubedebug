@@ -38,7 +38,7 @@ class UploadConfig {
 
     def validate() {
         if (StrUtil.isAllBlank(deployName, podName)) {
-            throw new GradleException("deployName or podName not define for the upload file $name")
+            throw new GradleException("should define one of deployName,podName for the upload file $name")
         }
         if (StrUtil.hasBlank(localPath, remotePath)) {
             throw new GradleException("localPath or remotePath not define for the upload file $name")
