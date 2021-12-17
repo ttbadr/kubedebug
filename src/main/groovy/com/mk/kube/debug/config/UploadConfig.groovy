@@ -11,6 +11,8 @@ class UploadConfig {
     String containerName
     String localPath
     String remotePath
+    String beforeUpload
+    String afterUpload
 
     UploadConfig(String name) {
         this.name = name
@@ -34,6 +36,14 @@ class UploadConfig {
 
     void remotePath(String remotePath) {
         this.remotePath = remotePath
+    }
+
+    void beforeUpload(String beforeUpload) {
+        this.beforeUpload = beforeUpload
+    }
+
+    void afterUpload(String afterUpload) {
+        this.afterUpload = afterUpload
     }
 
     def validate() {
