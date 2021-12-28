@@ -9,6 +9,8 @@ import com.mk.kube.debug.config.UploadConfig
 import com.mk.kube.debug.utils.KubeClient
 import com.mk.kube.debug.utils.PathUtil
 import com.mk.kube.debug.utils.SshClient
+import io.fabric8.kubernetes.api.model.HasMetadata
+import io.fabric8.kubernetes.client.internal.SerializationUtils
 import org.gradle.api.*
 import org.gradle.api.tasks.TaskAction
 
@@ -16,6 +18,7 @@ import javax.inject.Inject
 import java.util.concurrent.TimeUnit
 
 class KubeDebugTask extends DefaultTask {
+    private static final String REMOTE_BACKUP_DIR = "/tmp/kubeDebug/backup/"
     boolean restore = false
     boolean debug = true
     boolean uploadFilesOnly = false
@@ -62,7 +65,7 @@ class KubeDebugTask extends DefaultTask {
             throw new GradleException("deployment ${deployment.name} not exist")
         }
         if (restore) {
-            k8sClient.restoreDeployment(k8s, deploy)
+            restoreDeployment(deploy)
             return
         }
         uploadFiles()
@@ -87,7 +90,7 @@ class KubeDebugTask extends DefaultTask {
         def envs = KubeClient.getEnvs(deploy, KubeClient.JAVA_OPTIONS)
 
         if (envs.isEmpty()) {
-            k8sClient.backupResource(k8s, deploy)
+            backupResource(deploy)
         }
 
         if (envs.isEmpty() || !envs.get(0).getValue().contains(String.valueOf(port))) {
@@ -105,10 +108,8 @@ class KubeDebugTask extends DefaultTask {
     }
 
     private def init() {
-        KubeClient.init(k8s)
-        SshClient.init(k8s.host)
-        k8sClient = KubeClient.get()
-        sshClient = SshClient.get()
+        k8sClient = new KubeClient(k8s)
+        sshClient = new SshClient(k8s.host)
     }
 
     private int getUsablePort() {
@@ -155,5 +156,31 @@ class KubeDebugTask extends DefaultTask {
         if (StrUtil.isNotBlank(uploadFile.afterUpload)) {
             k8sClient.exec(pod.metadata.name, uploadFile.containerName, 60, uploadFile.afterUpload)
         }
+    }
+
+    private def backupResource(HasMetadata resource) {
+        def name = "${resource.metadata.name}.yaml"
+        try {
+            def yaml = SerializationUtils.dumpWithoutRuntimeStateAsYaml(resource)
+            def file = new File(FileUtil.getTmpDir(), name)
+            FileUtil.writeUtf8String(yaml, file)
+            sshClient.upload(file.canonicalPath, REMOTE_BACKUP_DIR)
+            file.delete()
+            logger.lifecycle("backup deployment ${resource.metadata.name} to ${k8s.host}:$REMOTE_BACKUP_DIR/$name")
+        } catch (Exception e) {
+            throw new GradleException("backup resource $name error", e)
+        }
+    }
+
+    private def restoreDeployment(HasMetadata resource) {
+        def name = "${resource.metadata.name}.yaml"
+        def backupFile = new File(FileUtil.getTmpDir(), name)
+        if (sshClient.exist(REMOTE_BACKUP_DIR + name)) {
+            sshClient.download(REMOTE_BACKUP_DIR + name, backupFile.canonicalPath)
+        } else {
+            throw new GradleException("no backup file to restore $name")
+        }
+        k8sClient.restore(backupFile)
+        logger.lifecycle("success to restore ${resource.metadata.name}")
     }
 }

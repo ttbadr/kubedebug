@@ -1,6 +1,6 @@
 package com.mk.kube.debug.utils
 
-import cn.hutool.core.io.FileUtil
+
 import cn.hutool.core.util.StrUtil
 import com.mk.kube.debug.PodExecListener
 import com.mk.kube.debug.config.DeployConfig
@@ -16,7 +16,6 @@ import io.fabric8.kubernetes.client.dsl.ContainerResource
 import io.fabric8.kubernetes.client.dsl.CopyOrReadable
 import io.fabric8.kubernetes.client.dsl.ExecWatch
 import io.fabric8.kubernetes.client.dsl.LogWatch
-import io.fabric8.kubernetes.client.internal.SerializationUtils
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -26,13 +25,11 @@ import java.util.concurrent.TimeUnit
 
 class KubeClient {
     private static final Logger logger = Logging.getLogger(KubeClient)
-    private static final File BACKUP_DIR = new File(FileUtil.getUserHomeDir(), ".cms/backup/")
     private KubernetesClient k8sClient
-    private static KubeClient instant
 
     static final String JAVA_OPTIONS = '_JAVA_OPTIONS'
 
-    private KubeClient(K8sConfig k8s) {
+    KubeClient(K8sConfig k8s) {
         k8sClient = new DefaultKubernetesClient(new ConfigBuilder()
                 .withMasterUrl("https://${k8s.host}:${k8s.port}")
                 .withNamespace(k8s.namespace)
@@ -41,17 +38,6 @@ class KubeClient {
                 .withUsername(k8s.user)
                 .build())
         logger.lifecycle("connected to k8s master node via: https://${k8s.host}:${k8s.port}")
-    }
-
-    def static init(K8sConfig k8s) {
-        instant = new KubeClient(k8s)
-    }
-
-    static KubeClient get() {
-        if (instant == null) {
-            throw new GradleException("KubeClient not initialized")
-        }
-        return instant
     }
 
     def debugDeployment(Deployment deploy, DeployConfig deployment, int debugPort) {
@@ -113,27 +99,9 @@ class KubeClient {
         logger.lifecycle("node service $serviceName created, port: $port")
     }
 
-    static def backupResource(K8sConfig k8s, HasMetadata resource) {
-        def name = "${k8s.host}-$resource.metadata.name"
-        try {
-            def yaml = SerializationUtils.dumpWithoutRuntimeStateAsYaml(resource)
-            def file = new File(BACKUP_DIR, name)
-            FileUtil.writeUtf8String(yaml, file)
-            logger.lifecycle("backup deployment ${resource.metadata.name} to $file.canonicalPath")
-        } catch (Exception e) {
-            throw new GradleException("backup resource $name error", e)
-        }
-    }
-
-    def restoreDeployment(K8sConfig k8s, HasMetadata resource) {
-        def name = "${k8s.host}-$resource.metadata.name"
-        def backupFile = new File(BACKUP_DIR, name)
-        if (!backupFile.exists()) {
-            throw new GradleException("no backup file to reset $name")
-        }
+    def restore(File backupFile) {
         def deploy = k8sClient.apps().deployments().load(backupFile).get()
         k8sClient.apps().deployments().createOrReplace(deploy)
-        logger.lifecycle("success to restore ${resource.metadata.name}")
     }
 
     def copy(Pod pod, UploadConfig uploadFile) {
@@ -209,7 +177,7 @@ class KubeClient {
     }
 
     def scale(String name, int replica) {
-        k8sClient.apps().deployments().withName(name).scale(null)
+        k8sClient.apps().deployments().withName(name).scale(replica)
     }
 
     static String getContainerName(String name, Pod pod) {
