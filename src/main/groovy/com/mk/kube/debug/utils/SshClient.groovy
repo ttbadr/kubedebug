@@ -42,7 +42,7 @@ class SshClient {
         }
     }
 
-    def scp(Pod pod, String containerName, String local, String remote) {
+    def scp(Pod pod, String local, String remote) {
         checkConnection()
 
         def podName = pod.metadata.name
@@ -53,9 +53,6 @@ class SshClient {
         ssh.startSession().withCloseable {
             it.exec("mkdir -p $tempDir").join()
         }
-
-        containerName = KubeClient.getContainerName(containerName, pod)
-        KubeClient.get().exec(podName, containerName, 5, "mkdir -p ${PathUtil.getParent(remote)}")
 
         //scp file from local to temp
         logger.lifecycle("scp file from $local to $temp")

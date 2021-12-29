@@ -150,7 +150,9 @@ class KubeDebugTask extends DefaultTask {
         if (FileUtil.size(new File(uploadFile.localPath)) <= 20971520) {
             k8sClient.copy(pod, uploadFile)
         } else {
-            sshClient.scp(pod, uploadFile.containerName, uploadFile.localPath, podPath)
+            def containerName = KubeClient.getContainerName(uploadFile.containerName, pod)
+            k8sClient.exec(pod.metadata.name, containerName, 5, "mkdir -p ${PathUtil.getParent(podPath)}")
+            sshClient.scp(pod, uploadFile.localPath, podPath)
         }
 
         if (StrUtil.isNotBlank(uploadFile.afterUpload)) {
