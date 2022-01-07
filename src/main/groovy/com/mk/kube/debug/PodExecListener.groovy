@@ -1,7 +1,6 @@
 package com.mk.kube.debug
 
 import io.fabric8.kubernetes.client.dsl.ExecListener
-import okhttp3.Response
 import org.slf4j.Logger
 
 import java.util.concurrent.CountDownLatch
@@ -16,7 +15,7 @@ class PodExecListener implements ExecListener {
     }
 
     @Override
-    void onOpen(Response response) {
+    void onOpen() {
         logger.debug("Shell was opened")
     }
 

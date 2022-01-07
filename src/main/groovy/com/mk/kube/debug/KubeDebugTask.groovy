@@ -10,6 +10,7 @@ import com.mk.kube.debug.utils.KubeClient
 import com.mk.kube.debug.utils.PathUtil
 import com.mk.kube.debug.utils.SshClient
 import io.fabric8.kubernetes.api.model.HasMetadata
+import io.fabric8.kubernetes.api.model.apps.Deployment
 import io.fabric8.kubernetes.client.internal.SerializationUtils
 import org.gradle.api.*
 import org.gradle.api.tasks.TaskAction
@@ -71,19 +72,16 @@ class KubeDebugTask extends DefaultTask {
         uploadFiles()
 
         if (!debug) {
-            k8sClient.scale(deployment.name, 0)
-            TimeUnit.SECONDS.sleep(2)
-            k8sClient.scale(deployment.name, deploy.spec.replicas)
-            logger.lifecycle("$deployment.name restarted")
+            restart(deploy)
             return
         }
 
         def serviceName = "${deployment.name}-debug"
         def debugService = k8sClient.getService(serviceName)
-        def debugEnabled = debugService == null
+        def isServiceCreated = debugService != null
 
-        def port = debugEnabled ? getUsablePort() : debugService.getSpec().getPorts().get(0).getNodePort()
-        if (!debugEnabled) {
+        def port = isServiceCreated ? debugService.getSpec().getPorts().get(0).getNodePort() : getUsablePort()
+        if (!isServiceCreated) {
             k8sClient.createDebugService(serviceName, deployment.name, port)
         }
 
@@ -95,7 +93,16 @@ class KubeDebugTask extends DefaultTask {
 
         if (envs.isEmpty() || !envs.get(0).getValue().contains(String.valueOf(port))) {
             k8sClient.debugDeployment(deploy, deployment, port)
+        } else {
+            restart(deploy)
         }
+    }
+
+    private def restart(Deployment deploy) {
+        k8sClient.scale(deploy.metadata.name, 0)
+        TimeUnit.SECONDS.sleep(2)
+        k8sClient.scale(deploy.metadata.name, deploy.spec.replicas)
+        logger.lifecycle("${deploy.metadata.name} restarted")
     }
 
     private def validate() {
