@@ -96,6 +96,7 @@ class KubeDebugTask extends DefaultTask {
         } else {
             restart(deploy)
         }
+        logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
     }
 
     private def restart(Deployment deploy) {
