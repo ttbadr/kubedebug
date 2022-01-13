@@ -4,7 +4,6 @@ import cn.hutool.core.io.file.FileNameUtil
 import io.fabric8.kubernetes.api.model.Pod
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.common.IOUtils
-import net.schmizz.sshj.connection.channel.direct.Session
 import net.schmizz.sshj.transport.verification.HostKeyVerifier
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
@@ -61,20 +60,21 @@ class SshClient {
 
         //cp file from temp to pod
         logger.lifecycle("kubectl cp file from $temp to $remote")
-        ssh.startSession().withCloseable {
-            kubectlCopy(it, "kubectl cp $temp $podName:$remote && rm -rf $temp")
-        }
+        kubectlCopy(ssh, "kubectl cp $temp $podName:$remote -n ${pod.metadata.namespace} && rm -rf $temp")
     }
 
-    def kubectlCopy(Session session, String cmd, retry = 3) {
-        def exec = session.exec(cmd)
-        exec.join(8, TimeUnit.MINUTES)
-        if (exec.exitStatus != 0) {
-            if (retry > 0) {
-                logger.lifecycle("kubectl cp failed, retry...")
-                kubectlCopy(session, cmd, retry - 1)
-            } else {
-                throw new GradleException("kubectl cp file failed. exit code $exec.exitStatus, ${IOUtils.readFully(exec.getErrorStream()).toString()}")
+    def kubectlCopy(SSHClient ssh, String cmd, retry = 3) {
+        ssh.startSession().withCloseable {
+            def exec = it.exec(cmd)
+            exec.join(8, TimeUnit.MINUTES)
+            if (exec.exitStatus != 0) {
+                if (retry > 0) {
+                    logger.error(IOUtils.readFully(exec.getErrorStream()).toString())
+                    logger.lifecycle("kubectl cp failed, retry...")
+                    kubectlCopy(ssh, cmd, retry - 1)
+                } else {
+                    throw new GradleException("kubectl cp file failed. exit code $exec.exitStatus, ${IOUtils.readFully(exec.getErrorStream()).toString()}")
+                }
             }
         }
     }
