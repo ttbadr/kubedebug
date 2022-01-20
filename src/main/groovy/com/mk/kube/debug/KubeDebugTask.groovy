@@ -91,11 +91,7 @@ class KubeDebugTask extends DefaultTask {
             backupResource(deploy)
         }
 
-        if (envs.isEmpty() || !envs.get(0).getValue().contains(String.valueOf(port))) {
-            k8sClient.debugDeployment(deploy, deployment, port)
-        } else {
-            restart(deploy)
-        }
+        k8sClient.debugDeployment(deploy, deployment, port)
         logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
     }
 
