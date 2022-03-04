@@ -40,7 +40,7 @@ class KubeClient {
         logger.lifecycle("connected to k8s master node via: https://${k8s.host}:${k8s.port}")
     }
 
-    def debugDeployment(Deployment deploy, DeployConfig deployment, int debugPort) {
+    Deployment debugDeployment(Deployment deploy, DeployConfig deployment, int debugPort) {
         if (!deployment.healthCheck) {
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setLivenessProbe(null)
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setReadinessProbe(null)
@@ -75,8 +75,9 @@ class KubeClient {
             container.withCommand(deployment.commands).withArgs(null)
         }
 
-        k8sClient.apps().deployments().replace(container.endContainer().endSpec().endTemplate().endSpec().build())
+        def newDeployment = k8sClient.apps().deployments().replace(container.endContainer().endSpec().endTemplate().endSpec().build())
         logger.lifecycle("deployment ${deployment.name} updated")
+        return newDeployment
     }
 
     def createDebugService(String serviceName, String appName, int port) {

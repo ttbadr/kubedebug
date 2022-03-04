@@ -91,7 +91,10 @@ class KubeDebugTask extends DefaultTask {
             backupResource(deploy)
         }
 
-        k8sClient.debugDeployment(deploy, deployment, port)
+        def newDeployment = k8sClient.debugDeployment(deploy, deployment, port)
+        if (deploy.metadata.resourceVersion == newDeployment.metadata.resourceVersion) {
+            restart(newDeployment)
+        }
         logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
     }
 
