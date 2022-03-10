@@ -81,9 +81,6 @@ class KubeDebugTask extends DefaultTask {
             if (!isServiceCreated) {
                 k8sClient.createDebugService(serviceName, deployment.name, port)
             }
-        } else {
-            restart(deploy)
-            return
         }
 
         //if deployment not update by this plugin then backup
@@ -96,7 +93,9 @@ class KubeDebugTask extends DefaultTask {
         if (deploy.metadata.resourceVersion == newDeployment.metadata.resourceVersion) {
             restart(newDeployment)
         }
-        logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
+        if (debug) {
+            logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
+        }
     }
 
     private def restart(Deployment deploy) {
