@@ -40,28 +40,31 @@ class KubeClient {
         logger.lifecycle("connected to k8s master node via: https://${k8s.host}:${k8s.port}")
     }
 
-    Deployment debugDeployment(Deployment deploy, DeployConfig deployment, int debugPort) {
-        if (!deployment.healthCheck) {
+    Deployment updateDeployment(Deployment deploy, DeployConfig deployment, boolean debug, int debugPort) {
+        deploy.metadata.labels.put("kubeDebug", "true")
+        if (debug && !deployment.healthCheck) {
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setLivenessProbe(null)
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setReadinessProbe(null)
         }
 
+        def replicas = deploy.spec.replicas == 0 ? deployment.replicas : deploy.spec.replicas
         def container = new DeploymentBuilder(deploy).editSpec()
-                .withReplicas(deployment.replicas)
+                .withReplicas(debug ? 1 : replicas)
                 .editTemplate()
                 .editSpec()
                 .editFirstContainer()
 
-        def value = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
-        if (container.hasMatchingEnv({ it.getName() == JAVA_OPTIONS })) {
-            container.editMatchingEnv({ it.getName() == JAVA_OPTIONS }).withValue(value)
-        } else {
-            container.addToEnv(new EnvVarBuilder()
-                    .withName(JAVA_OPTIONS)
-                    .withValue(value)
-                    .build())
+        if (debug) {
+            def value = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
+            if (container.hasMatchingEnv({ it.getName() == JAVA_OPTIONS })) {
+                container.editMatchingEnv({ it.getName() == JAVA_OPTIONS }).withValue(value)
+            } else {
+                container.addToEnv(new EnvVarBuilder()
+                        .withName(JAVA_OPTIONS)
+                        .withValue(value)
+                        .build())
+            }
         }
-
 
         if (deployment.runAsRoot) {
             container.editSecurityContext().withRunAsUser(0).withRunAsNonRoot(false).endSecurityContext()

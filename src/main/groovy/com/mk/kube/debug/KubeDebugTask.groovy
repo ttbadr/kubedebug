@@ -71,27 +71,28 @@ class KubeDebugTask extends DefaultTask {
         }
         uploadFiles()
 
-        if (!debug) {
+        def port = 0
+        if (debug) {
+            def serviceName = "${deployment.name}-debug"
+            def debugService = k8sClient.getService(serviceName)
+            def isServiceCreated = debugService != null
+
+            port = isServiceCreated ? debugService.getSpec().getPorts().get(0).getNodePort() : getUsablePort()
+            if (!isServiceCreated) {
+                k8sClient.createDebugService(serviceName, deployment.name, port)
+            }
+        } else {
             restart(deploy)
             return
         }
 
-        def serviceName = "${deployment.name}-debug"
-        def debugService = k8sClient.getService(serviceName)
-        def isServiceCreated = debugService != null
-
-        def port = isServiceCreated ? debugService.getSpec().getPorts().get(0).getNodePort() : getUsablePort()
-        if (!isServiceCreated) {
-            k8sClient.createDebugService(serviceName, deployment.name, port)
-        }
-
-        def envs = KubeClient.getEnvs(deploy, KubeClient.JAVA_OPTIONS)
-
-        if (envs.isEmpty()) {
+        //if deployment not update by this plugin then backup
+        def isUpdated = deploy.metadata.labels.get("kubeDebug") == null
+        if (!isUpdated) {
             backupResource(deploy)
         }
 
-        def newDeployment = k8sClient.debugDeployment(deploy, deployment, port)
+        def newDeployment = k8sClient.updateDeployment(deploy, deployment, debug, port)
         if (deploy.metadata.resourceVersion == newDeployment.metadata.resourceVersion) {
             restart(newDeployment)
         }
