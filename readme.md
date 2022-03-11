@@ -57,14 +57,14 @@ kubeDebug {
 
 #### supported config
 
-| parameter       | default | description                                                                                                               |
-| ----------------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| restore         | false   | if ture then restore the deployment if the deployment exist in the local                                                  |
-| debug           | true    | edit the deployment, also create debug node port to debug java deployment.<br />if false then just restart the deployment |
-| uploadFilesOnly | false   | just upload configured files, doesn't debug or restart deployment                                                         |
-| k8s             | null    | [configure the k8s cluster](#k8s)                                                                                         |
-| uploads         | null    | [configure the upload files](#uploads)                                                                                                |
-| deployment      | null    | [configure the deployment that need to restart or debug](#deployment)                                                                    |
+| parameter       | default | description                                                                                                                  |
+|-----------------|---------|------------------------------------------------------------------------------------------------------------------------------|
+| restore         | false   | if ture,then restore the deployment to the before applying this plugin                                                       |
+| debug           | true    | if true,except modify deployment by config also add debug port for the deployment.<br />otherwise just modify the deployment |
+| uploadFilesOnly | false   | just upload configured files, doesn't modify deployment                                                                      |
+| k8s             | null    | [configure the k8s cluster](#k8s)                                                                                            |
+| uploads         | null    | [configure the upload files](#uploads)                                                                                       |
+| deployment      | null    | [configure the deployment](#deployment)                                                                                      |
 
 ##### <a name="k8s">k8s</a>
 

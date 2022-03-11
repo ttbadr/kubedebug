@@ -47,9 +47,8 @@ class KubeClient {
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setReadinessProbe(null)
         }
 
-        def replicas = deploy.spec.replicas == 0 ? deployment.replicas : deploy.spec.replicas
         def container = new DeploymentBuilder(deploy).editSpec()
-                .withReplicas(debug ? 1 : replicas)
+                .withReplicas(0)
                 .editTemplate()
                 .editSpec()
                 .editFirstContainer()

@@ -10,7 +10,6 @@ import com.mk.kube.debug.utils.KubeClient
 import com.mk.kube.debug.utils.PathUtil
 import com.mk.kube.debug.utils.SshClient
 import io.fabric8.kubernetes.api.model.HasMetadata
-import io.fabric8.kubernetes.api.model.apps.Deployment
 import io.fabric8.kubernetes.client.internal.SerializationUtils
 import org.gradle.api.*
 import org.gradle.api.tasks.TaskAction
@@ -84,25 +83,20 @@ class KubeDebugTask extends DefaultTask {
         }
 
         //if deployment not update by this plugin then backup
-        def isUpdated = deploy.metadata.labels.get("kubeDebug") == null
+        def isUpdated = deploy.metadata.labels.get("kubeDebug") != null
         if (!isUpdated) {
             backupResource(deploy)
         }
 
         def newDeployment = k8sClient.updateDeployment(deploy, deployment, debug, port)
-        if (deploy.metadata.resourceVersion == newDeployment.metadata.resourceVersion) {
-            restart(newDeployment)
-        }
+
+        def replicas = deploy.spec.replicas == 0 ? deployment.replicas : deploy.spec.replicas
+        k8sClient.scale(newDeployment.metadata.name, debug ? 1 : replicas)
+        logger.lifecycle("${deploy.metadata.name} restarted")
+
         if (debug) {
             logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
         }
-    }
-
-    private def restart(Deployment deploy) {
-        k8sClient.scale(deploy.metadata.name, 0)
-        TimeUnit.SECONDS.sleep(2)
-        k8sClient.scale(deploy.metadata.name, deploy.spec.replicas)
-        logger.lifecycle("${deploy.metadata.name} restarted")
     }
 
     private def validate() {
