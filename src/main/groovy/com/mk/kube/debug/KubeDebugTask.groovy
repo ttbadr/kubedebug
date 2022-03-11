@@ -88,14 +88,18 @@ class KubeDebugTask extends DefaultTask {
             backupResource(deploy)
         }
 
+        //before update deployment, scale to 0
+        k8sClient.scale(deploy.metadata.name, 0)
+        //update deployment
         def newDeployment = k8sClient.updateDeployment(deploy, deployment, debug, port)
-
+        //scale to original replica or 1 if debug enable
         def replicas = deploy.spec.replicas == 0 ? deployment.replicas : deploy.spec.replicas
         k8sClient.scale(newDeployment.metadata.name, debug ? 1 : replicas)
-        logger.lifecycle("${deploy.metadata.name} restarted")
 
         if (debug) {
             logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
+        } else {
+            logger.lifecycle("$deployment.name restarted")
         }
     }
 
