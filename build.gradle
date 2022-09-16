@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.mk.kube'
-version '0.4.25'
+version '0.5.0'
 
 repositories {
     mavenCentral()
@@ -14,14 +14,14 @@ repositories {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
-    implementation 'io.fabric8:kubernetes-client:5.12.1'
-    implementation 'cn.hutool:hutool-core:5.7.21'
+    implementation 'io.fabric8:kubernetes-client:6.1.1'
+    implementation 'cn.hutool:hutool-core:5.8.6'
     implementation 'commons-codec:commons-codec:1.15'
     implementation 'org.apache.commons:commons-compress:1.21'
-    implementation 'com.hierynomus:sshj:0.32.0'
+    implementation 'com.hierynomus:sshj:0.34.0'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
 }
 
 test {

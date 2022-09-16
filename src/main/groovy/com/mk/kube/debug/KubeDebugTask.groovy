@@ -10,7 +10,7 @@ import com.mk.kube.debug.utils.KubeClient
 import com.mk.kube.debug.utils.PathUtil
 import com.mk.kube.debug.utils.SshClient
 import io.fabric8.kubernetes.api.model.HasMetadata
-import io.fabric8.kubernetes.client.internal.SerializationUtils
+import io.fabric8.kubernetes.client.utils.Serialization
 import org.gradle.api.*
 import org.gradle.api.tasks.TaskAction
 
@@ -113,8 +113,20 @@ class KubeDebugTask extends DefaultTask {
     }
 
     private def init() {
-        k8sClient = new KubeClient(k8s)
         sshClient = new SshClient(k8s.host)
+        k8sClient = new KubeClient(getKubeConfig())
+    }
+
+    private String getKubeConfig() {
+        def path = sshClient.getKubeConfigFilePath()
+        if (StrUtil.isBlank(path)) {
+            throw new GradleException("could not find kubeConfig file in $k8s.host")
+        }
+        def kubeConfig = sshClient.getFileContent(path)
+        if (StrUtil.isBlank(kubeConfig)) {
+            throw new GradleException("could not get kubeConfig content from $k8s.host/$path")
+        }
+        return kubeConfig
     }
 
     private int getUsablePort() {
@@ -156,7 +168,8 @@ class KubeDebugTask extends DefaultTask {
             k8sClient.copy(pod, uploadFile)
         } else {
             def containerName = KubeClient.getContainerName(uploadFile.containerName, pod)
-            k8sClient.exec(pod.metadata.name, containerName, 5, "mkdir -p ${PathUtil.getParent(podPath)}")
+            def parent = PathUtil.getParent(podPath)
+            k8sClient.exec(pod.metadata.name, containerName, 5, "[ ! -e $parent ] && mkdir -p $parent")
             sshClient.scp(pod, uploadFile.localPath, podPath)
         }
 
@@ -168,12 +181,12 @@ class KubeDebugTask extends DefaultTask {
     private def backupResource(HasMetadata resource) {
         def name = "${resource.metadata.name}.yaml"
         try {
-            def yaml = SerializationUtils.dumpWithoutRuntimeStateAsYaml(resource)
+            def yaml = Serialization.asYaml(resource)
             def file = new File(FileUtil.getTmpDir(), name)
             FileUtil.writeUtf8String(yaml, file)
             sshClient.upload(file.canonicalPath, REMOTE_BACKUP_DIR)
             file.delete()
-            logger.lifecycle("backup deployment ${resource.metadata.name} to ${k8s.host}:$REMOTE_BACKUP_DIR/$name")
+            logger.lifecycle("backup deployment ${resource.metadata.name} to ${k8s.host}:$REMOTE_BACKUP_DIR$name")
         } catch (Exception e) {
             throw new GradleException("backup resource $name error", e)
         }

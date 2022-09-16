@@ -1,5 +1,6 @@
 package com.mk.kube.debug.utils
 
+import cn.hutool.core.io.FileUtil
 import cn.hutool.core.io.file.FileNameUtil
 import io.fabric8.kubernetes.api.model.Pod
 import net.schmizz.sshj.SSHClient
@@ -92,6 +93,31 @@ class SshClient {
     def download(String remote, String local) throws IOException {
         checkConnection()
         ssh.newSCPFileTransfer().download(remote, local)
+    }
+
+    def getFileContent(String remote) {
+        checkConnection()
+        def tempKubeConfigFile = new File(FileUtil.getTmpDir(), "kubeConfig.yaml")
+        FileUtil.del(tempKubeConfigFile)
+        download(remote, tempKubeConfigFile.getAbsolutePath())
+        String content = FileUtil.readUtf8String(tempKubeConfigFile)
+        return content
+    }
+
+    def getKubeConfigFilePath() {
+        checkConnection()
+        def client = ssh.newSFTPClient()
+        if (client.statExistence('/root/.kube/config') != null) {
+            return '/root/.kube/config'
+        }
+        def ls = client.ls('/home')
+        for (final def folder in ls) {
+            def kubeFolder = client.ls(folder.path).findAll { it.name == '.kube' }
+            if (kubeFolder.size() > 0 && exist(kubeFolder.first().path + '/config')) {
+                return kubeFolder.first().path + '/config'
+            }
+        }
+        return null
     }
 
     boolean exist(String path) {

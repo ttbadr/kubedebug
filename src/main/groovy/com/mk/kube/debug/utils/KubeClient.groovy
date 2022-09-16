@@ -1,17 +1,14 @@
 package com.mk.kube.debug.utils
 
-
 import cn.hutool.core.util.StrUtil
 import com.mk.kube.debug.PodExecListener
 import com.mk.kube.debug.config.DeployConfig
-import com.mk.kube.debug.config.K8sConfig
 import com.mk.kube.debug.config.UploadConfig
 import io.fabric8.kubernetes.api.model.*
 import io.fabric8.kubernetes.api.model.apps.Deployment
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder
-import io.fabric8.kubernetes.client.ConfigBuilder
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.fabric8.kubernetes.client.dsl.ContainerResource
 import io.fabric8.kubernetes.client.dsl.CopyOrReadable
 import io.fabric8.kubernetes.client.dsl.ExecWatch
@@ -29,15 +26,10 @@ class KubeClient {
 
     static final String JAVA_OPTIONS = '_JAVA_OPTIONS'
 
-    KubeClient(K8sConfig k8s) {
-        k8sClient = new DefaultKubernetesClient(new ConfigBuilder()
-                .withMasterUrl("https://${k8s.host}:${k8s.port}")
-                .withNamespace(k8s.namespace)
-                .withTrustCerts(true)
-                .withPassword(k8s.passwd)
-                .withUsername(k8s.user)
-                .build())
-        logger.lifecycle("connected to k8s master node via: https://${k8s.host}:${k8s.port}")
+    KubeClient(String kubeConfig) {
+        def config = io.fabric8.kubernetes.client.Config.fromKubeconfig(kubeConfig)
+        k8sClient = KubernetesClientBuilder.newInstance().withConfig(config).build()
+        logger.lifecycle("connected to k8s master node via: ${config.masterUrl}")
     }
 
     Deployment updateDeployment(Deployment deploy, DeployConfig deployment, boolean debug, int debugPort) {
