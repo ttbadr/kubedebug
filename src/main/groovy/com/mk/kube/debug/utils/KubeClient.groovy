@@ -87,7 +87,7 @@ class KubeClient {
                         .withProtocol("TCP")
                         .withNodePort(port)
                         .withTargetPort(new IntOrStringBuilder()
-                                .withIntVal(port)
+                                .withValue(port)
                                 .build())
                         .withPort(port).build())
                 .endSpec().build())
