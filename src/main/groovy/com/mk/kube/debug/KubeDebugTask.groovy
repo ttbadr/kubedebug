@@ -24,7 +24,7 @@ class KubeDebugTask extends DefaultTask {
     boolean uploadFilesOnly = false
 
     NamedDomainObjectContainer<UploadConfig> uploads
-    K8sConfig k8s
+    K8sConfig k8sConfig
     DeployConfig deployment
 
     private KubeClient k8sClient
@@ -32,13 +32,13 @@ class KubeDebugTask extends DefaultTask {
 
     @Inject
     KubeDebugTask(Project project) {
-        k8s = project.objects.newInstance(K8sConfig)
+        k8sConfig = project.objects.newInstance(K8sConfig)
         deployment = project.objects.newInstance(DeployConfig)
         uploads = project.container(UploadConfig)
     }
 
     void k8s(Action<? super K8sConfig> action) {
-        action.execute(k8s)
+        action.execute(k8sConfig)
     }
 
     void deployment(Action<? super DeployConfig> action) {
@@ -97,15 +97,15 @@ class KubeDebugTask extends DefaultTask {
         k8sClient.scale(newDeployment.metadata.name, debug ? 1 : replicas)
 
         if (debug) {
-            logger.lifecycle("$deployment.name debugable on $k8s.host:$port")
+            logger.lifecycle("$deployment.name debugable on $k8sConfig.host:$port")
         } else {
             logger.lifecycle("$deployment.name restarted")
         }
     }
 
     private def validate() {
-        if (StrUtil.isBlank(k8s.host)) {
-            throw new GradleException("should specify k8s ${k8s.host}")
+        if (StrUtil.isBlank(k8sConfig.host)) {
+            throw new GradleException("should specify k8s ${k8sConfig.host}")
         }
         if (StrUtil.isBlank(deployment.name)) {
             throw new GradleException("should specify debug deploy name")
@@ -113,26 +113,26 @@ class KubeDebugTask extends DefaultTask {
     }
 
     private def init() {
-        sshClient = new SshClient(k8s.host)
-        k8sClient = new KubeClient(getKubeConfig())
+        sshClient = new SshClient(k8sConfig.host)
+        k8sClient = new KubeClient(getKubeConfig(), k8sConfig.namespace)
     }
 
     private String getKubeConfig() {
         def path = sshClient.getKubeConfigFilePath()
         if (StrUtil.isBlank(path)) {
-            throw new GradleException("could not find kubeConfig file in $k8s.host")
+            throw new GradleException("could not find kubeConfig file in $k8sConfig.host")
         }
         def kubeConfig = sshClient.getFileContent(path)
         if (StrUtil.isBlank(kubeConfig)) {
-            throw new GradleException("could not get kubeConfig content from $k8s.host/$path")
+            throw new GradleException("could not get kubeConfig content from $k8sConfig.host/$path")
         }
         return kubeConfig
     }
 
     private int getUsablePort() {
         int port = 30055
-        while (NetUtil.isOpen(new InetSocketAddress(k8s.host, port), TimeUnit.SECONDS.toMillis(3).intValue())) {
-            logger.lifecycle("testing port $port on ${k8s.host}")
+        while (NetUtil.isOpen(new InetSocketAddress(k8sConfig.host, port), TimeUnit.SECONDS.toMillis(3).intValue())) {
+            logger.lifecycle("testing port $port on ${k8sConfig.host}")
             port++
         }
         return port
@@ -186,7 +186,7 @@ class KubeDebugTask extends DefaultTask {
             FileUtil.writeUtf8String(yaml, file)
             sshClient.upload(file.canonicalPath, REMOTE_BACKUP_DIR)
             file.delete()
-            logger.lifecycle("backup deployment ${resource.metadata.name} to ${k8s.host}:$REMOTE_BACKUP_DIR$name")
+            logger.lifecycle("backup deployment ${resource.metadata.name} to ${k8sConfig.host}:$REMOTE_BACKUP_DIR$name")
         } catch (Exception e) {
             throw new GradleException("backup resource $name error", e)
         }

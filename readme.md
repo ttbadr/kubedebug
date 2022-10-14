@@ -21,7 +21,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.mk.kube:KubeDebug:0.5.0'
+        classpath 'com.mk.kube:KubeDebug:0.5.2'
     }
 }
 

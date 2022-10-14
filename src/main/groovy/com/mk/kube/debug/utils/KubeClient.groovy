@@ -26,10 +26,11 @@ class KubeClient {
 
     static final String JAVA_OPTIONS = '_JAVA_OPTIONS'
 
-    KubeClient(String kubeConfig) {
+    KubeClient(String kubeConfig, String nameSpace) {
         def config = io.fabric8.kubernetes.client.Config.fromKubeconfig(kubeConfig)
+        config.setNamespace(nameSpace)
         k8sClient = KubernetesClientBuilder.newInstance().withConfig(config).build()
-        logger.lifecycle("connected to k8s master node via: ${config.masterUrl}")
+        logger.lifecycle("connected to k8s master node via: ${config.masterUrl}, namespace is $nameSpace")
     }
 
     Deployment updateDeployment(Deployment deploy, DeployConfig deployment, boolean debug, int debugPort) {
