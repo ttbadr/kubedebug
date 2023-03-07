@@ -16,7 +16,7 @@ Kube debug plugin feature
 buildscript {
     repositories {
         maven {
-            url cmsNexus
+            url http://la-nexus.tandbergtv.lan:8081/repository/cms
         }
     }
 
@@ -103,7 +103,6 @@ deployment {
     healthCheck = true //deployment readiness and liveliness check, force false when debug is true
     commands //replace the container commands with this; default null
     restore = false //if ture, then restore the deployment to the time before applying this plugin
-    debug = false
-    //if true, config the deployment for remote debug, otherwise just restart the deployment
+    debug = false //if true, config the deployment for remote debug
 }
 ```
