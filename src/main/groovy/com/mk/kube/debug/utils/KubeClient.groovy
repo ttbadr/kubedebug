@@ -12,7 +12,6 @@ import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.fabric8.kubernetes.client.dsl.ContainerResource
 import io.fabric8.kubernetes.client.dsl.CopyOrReadable
 import io.fabric8.kubernetes.client.dsl.ExecWatch
-import io.fabric8.kubernetes.client.dsl.LogWatch
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -71,13 +70,13 @@ class KubeClient {
             container.withCommand(deployment.commands).withArgs(null)
         }
 
-        def newDeployment = k8sClient.apps().deployments().replace(container.endContainer().endSpec().endTemplate().endSpec().build())
+        def newDeployment = k8sClient.resource(container.endContainer().endSpec().endTemplate().endSpec().build()).replace()
         logger.lifecycle("deployment ${deployment.name} updated")
         return newDeployment
     }
 
     def createDebugService(String serviceName, String appName, int port) {
-        k8sClient.services().create(new ServiceBuilder()
+        k8sClient.resource(new ServiceBuilder()
                 .withNewMetadata()
                 .withName(serviceName)
                 .endMetadata()
@@ -92,24 +91,24 @@ class KubeClient {
                                 .withValue(port)
                                 .build())
                         .withPort(port).build())
-                .endSpec().build())
+                .endSpec().build()).create()
         logger.lifecycle("node service $serviceName created, port: $port")
     }
 
     def restore(File backupFile) {
         def deploy = k8sClient.apps().deployments().load(backupFile).get()
-        k8sClient.apps().deployments().createOrReplace(deploy)
+        k8sClient.resource(deploy).createOrReplace()
     }
 
     def copy(Pod pod, UploadConfig uploadFile) {
         def local = new File(uploadFile.localPath)
         boolean dir = local.isDirectory()
 
-        ContainerResource<LogWatch, InputStream, PipedOutputStream, OutputStream, PipedInputStream, String, ExecWatch, Boolean, InputStream, Boolean> container =
-                k8sClient.pods().withName(pod.metadata.name).inContainer(getContainerName(uploadFile.containerName, pod))
+        ContainerResource container = k8sClient.pods().withName(pod.metadata.name)
+                .inContainer(getContainerName(uploadFile.containerName, pod))
 
         def podPath = PathUtil.genDestPath(uploadFile.localPath, uploadFile.remotePath)
-        CopyOrReadable<Boolean, InputStream, Boolean> selector
+        CopyOrReadable selector
         if (dir) {
             selector = container.dir(podPath)
         } else {
@@ -166,11 +165,6 @@ class KubeClient {
 
     Service getService(String name) {
         return k8sClient.services().withName(name).get()
-    }
-
-    static List<EnvVar> getEnvs(Deployment metadata, String envName) {
-        return metadata.getSpec().getTemplate().getSpec().getContainers()
-                .get(0).getEnv().findAll({ it.name == envName })
     }
 
     def scale(String name, int replica) {
