@@ -7,6 +7,6 @@ import org.gradle.api.Project
 class KubeDebugPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
-        project.tasks.create('kubeDebug', KubeDebugTask, project)
+        project.tasks.register('kubeDebug', KubeDebugTask, project)
     }
 }

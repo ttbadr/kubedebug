@@ -34,8 +34,9 @@ class KubeClient {
     }
 
     Deployment updateDeployment(Deployment deploy, DeployConfig deployment, boolean debug, int debugPort) {
-        deploy.metadata.labels.put("kubeDebug", "true")
-        if (debug && !deployment.healthCheck) {
+        deploy.metadata.labels.putIfAbsent("kubeDebug", "true")
+        //if debug enabled, then remove readiness and liveness
+        if (debug || !deployment.healthCheck) {
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setLivenessProbe(null)
             deploy.getSpec().getTemplate().getSpec().getContainers().get(0).setReadinessProbe(null)
         }

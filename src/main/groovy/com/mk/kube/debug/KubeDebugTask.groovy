@@ -19,9 +19,6 @@ import java.util.concurrent.TimeUnit
 
 class KubeDebugTask extends DefaultTask {
     private static final String REMOTE_BACKUP_DIR = "/tmp/kubeDebug/backup/"
-    boolean restore = false
-    boolean debug = true
-    boolean uploadFilesOnly = false
 
     NamedDomainObjectContainer<UploadConfig> uploads
     K8sConfig k8sConfig
@@ -50,28 +47,26 @@ class KubeDebugTask extends DefaultTask {
     }
 
     @TaskAction
-    private def run() {
+    private void run() {
         validate()
         init()
-        def deploy
 
-        if (uploadFilesOnly) {
-            uploadFiles()
+        uploadFiles()
+
+        if (StrUtil.isBlank(deployment.name)) {
             return
         }
-
-        deploy = k8sClient.getDeploy(deployment.name)
+        def deploy = k8sClient.getDeploy(deployment.name)
         if (deploy == null) {
             throw new GradleException("deployment ${deployment.name} not exist")
         }
-        if (restore) {
+        if (deployment.restore) {
             restoreDeployment(deploy)
             return
         }
-        uploadFiles()
 
         def port = 0
-        if (debug) {
+        if (deployment.debug) {
             def serviceName = "${deployment.name}-debug"
             def debugService = k8sClient.getService(serviceName)
             def isServiceCreated = debugService != null
@@ -83,20 +78,22 @@ class KubeDebugTask extends DefaultTask {
         }
 
         //if deployment not update by this plugin then backup
-        def isUpdated = deploy.metadata.labels.get("kubeDebug") != null
-        if (!isUpdated) {
+        if (!deploy.metadata.labels.containsKey("kubeDebug")) {
             backupResource(deploy)
         }
 
         //before update deployment, scale to 0
         k8sClient.scale(deploy.metadata.name, 0)
         //update deployment
-        def newDeployment = k8sClient.updateDeployment(deploy, deployment, debug, port)
-        //scale to original replica or 1 if debug enable
-        def replicas = deploy.spec.replicas == 0 ? deployment.replicas : deploy.spec.replicas
-        k8sClient.scale(newDeployment.metadata.name, debug ? 1 : replicas)
+        def newDeployment = k8sClient.updateDeployment(deploy, deployment, deployment.debug, port)
+        //scale to original replica or configured replica
+        def replicas = deployment.replicas == 0 ? deploy.spec.replicas : deployment.replicas
+        //set replica to 1 if original replica is 0
+        replicas = replicas == 0 ? 1 : replicas
+        //if debug enable, force scale to 1
+        k8sClient.scale(newDeployment.metadata.name, deployment.debug ? 1 : replicas)
 
-        if (debug) {
+        if (port > 0) {
             logger.lifecycle("$deployment.name debugable on $k8sConfig.host:$port")
         } else {
             logger.lifecycle("$deployment.name restarted")
@@ -106,9 +103,6 @@ class KubeDebugTask extends DefaultTask {
     private def validate() {
         if (StrUtil.isBlank(k8sConfig.host)) {
             throw new GradleException("should specify k8s ${k8sConfig.host}")
-        }
-        if (StrUtil.isBlank(deployment.name)) {
-            throw new GradleException("should specify debug deploy name")
         }
     }
 

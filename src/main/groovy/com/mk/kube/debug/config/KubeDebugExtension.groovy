@@ -5,8 +5,6 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 
 class KubeDebugExtension {
-    boolean restore = false
-    boolean uploadFilesOnly = false
     NamedDomainObjectContainer<UploadConfig> uploads
     K8sConfig k8s
     DeployConfig deployment
