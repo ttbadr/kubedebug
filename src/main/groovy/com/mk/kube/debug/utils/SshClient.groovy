@@ -57,7 +57,10 @@ class SshClient {
 
         //scp file from local to temp
         logger.lifecycle("scp file from $local to $temp")
-        ssh.newSCPFileTransfer().upload(local, temp)
+
+        def transfer = ssh.newSCPFileTransfer()
+        transfer.setTransferListener(new SimpleTransferListener())
+        transfer.upload(local, temp)
 
         //cp file from temp to pod
         logger.lifecycle("kubectl cp file from $temp to $remote")
