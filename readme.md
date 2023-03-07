@@ -18,6 +18,7 @@ buildscript {
         maven {
             url http://la-nexus.tandbergtv.lan:8081/repository/cms
         }
+        mavenCentral()
     }
 
     dependencies {
