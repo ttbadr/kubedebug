@@ -70,13 +70,13 @@ class KubeClient {
             container.withCommand(deployment.commands).withArgs(null)
         }
 
-        def newDeployment = k8sClient.resource(container.endContainer().endSpec().endTemplate().endSpec().build()).replace()
+        def newDeployment = k8sClient.apps().deployments().replace(container.endContainer().endSpec().endTemplate().endSpec().build())
         logger.lifecycle("deployment ${deployment.name} updated")
         return newDeployment
     }
 
     def createDebugService(String serviceName, String appName, int port) {
-        k8sClient.resource(new ServiceBuilder()
+        k8sClient.services().create(new ServiceBuilder()
                 .withNewMetadata()
                 .withName(serviceName)
                 .endMetadata()
@@ -91,13 +91,13 @@ class KubeClient {
                                 .withValue(port)
                                 .build())
                         .withPort(port).build())
-                .endSpec().build()).create()
+                .endSpec().build())
         logger.lifecycle("node service $serviceName created, port: $port")
     }
 
     def restore(File backupFile) {
         def deploy = k8sClient.apps().deployments().load(backupFile).get()
-        k8sClient.resource(deploy).createOrReplace()
+        k8sClient.apps().deployments().replace(deploy)
     }
 
     def copy(Pod pod, UploadConfig uploadFile) {
