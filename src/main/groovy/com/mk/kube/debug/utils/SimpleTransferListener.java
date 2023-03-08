@@ -1,6 +1,5 @@
 package com.mk.kube.debug.utils;
 
-import cn.hutool.core.util.NumberUtil;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.xfer.TransferListener;
 import org.gradle.api.logging.Logger;
@@ -23,8 +22,8 @@ public class SimpleTransferListener implements TransferListener {
 
     @Override
     public StreamCopier.Listener file(final String name, final long size) {
-        log.lifecycle("started transferring file `{}` ({} kB)", name,
-            NumberUtil.div(size, 1024, 1));
+        log.lifecycle("started transferring file `{}` ({})", name,
+            ProgressLoggerWrapper.toLengthText(size));
         return new CopyListener(name, size);
     }
 
@@ -32,7 +31,8 @@ public class SimpleTransferListener implements TransferListener {
 
         private final String name;
         private final long size;
-        private long prePercent = 0;
+        private long lastPrintTime = 0;
+        private long lastPercent = 0;
 
         public CopyListener(String name, long size) {
             this.name = name;
@@ -45,11 +45,12 @@ public class SimpleTransferListener implements TransferListener {
                 return;
             }
             long percent = (transferred * 100) / size;
-            //print progress if changed more than 1 percent
-            if (percent - prePercent >= 1) {
+            long now = System.currentTimeMillis();
+            if (now - lastPrintTime > 6000 && percent - lastPercent >= 1) {
+                lastPrintTime = now;
                 log.lifecycle("transferred {}% of `{}`", percent, name);
             }
-            prePercent = percent;
+            lastPercent = percent;
         }
     }
 }
