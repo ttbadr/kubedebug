@@ -22,7 +22,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.mk.kube:KubeDebug:0.6.0'
+        classpath 'com.mk.kube:KubeDebug:0.6.1'
     }
 }
 
@@ -32,7 +32,7 @@ apply plugin: 'com.mk.kube.debug'
 ### config plugin
 
 ```groovy
-// config the kubeDebug task in your build.gradle
+// config the kubeDebug task in your build.gradle, here is a example
 kubeDebug {
     dependsOn build
 
@@ -42,15 +42,22 @@ kubeDebug {
 
     uploads {
         cms {
-            localPath file('build/libs/cms.ear').canonicalPath
-            podName 'cms-config-0'
-            remotePath '/opt/tandbergtv/cms/plugins/jboss-deployments/'
+            from file('build/libs/cms.ear')
+            to 'cms-config:/opt/tandbergtv/cms/plugins/jboss-deployments/'
         }
+    }
+
+    zipPatch {
+        src 'cms-metadata-manager:/opt/tandbergtv/jboss/standalone/deployments/cms.ear'
+        to 'cms-config:/opt/tandbergtv/cms/plugins/jboss-deployments/cms.ear'
+        patch([
+                (file('../com.tandbergtv.watchpoint.title/build/libs/com.tandbergtv.watchpoint.title-10.2.000.0.jar')): 'lib',
+        ])
     }
 
     deployment {
         name 'cms-metadata-manager'
-        debug true
+        debug false
         restore false
     }
 }
@@ -62,6 +69,7 @@ kubeDebug {
 |------------|-----------------------------------------|
 | k8s        | [configure the k8s cluster](#k8s)       |
 | uploads    | [configure the upload files](#uploads)  |
+| zipPath    | [configure the zip patch](#zipPatch)    |
 | deployment | [configure the deployment](#deployment) |
 
 ##### <a name="k8s">k8s</a>
@@ -81,15 +89,26 @@ k8s {
 ```groovy
 uploads {
     name { // upload conf name, use whatever you want
-        deployName //destination deployment name
-        podName //destination pod name, should specify one of the podName and deployName
-        containerName //if not specify, then default use the first container of pod
-        localPath //upload local source file path
-        remotePath //upload destination path in pod container
+        from //local file apth
+        to //upload destination path: <appName:path in container>
         beforeUpload //commands before upload, type array
         afterUpload //commands after upload, type array
     }
     //...
+}
+```
+
+##### <a name="zipPatch">zipPatch</a>
+
+```groovy
+zipPatch {
+    src //zip file path: <appName:path in container>
+    to
+    //zip file path: <appName:path in container>, if the file not exit in this path, then download it from the src path
+    //patch file, type Map
+    patch([
+            ('local file path'): 'directory in zip',
+    ])
 }
 ```
 
