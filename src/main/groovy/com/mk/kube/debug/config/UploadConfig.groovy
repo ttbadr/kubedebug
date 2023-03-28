@@ -5,12 +5,9 @@ import cn.hutool.core.util.StrUtil
 import org.gradle.api.GradleException
 
 class UploadConfig {
-    final String name
-    String deployName
-    String podName
-    String containerName
-    String localPath
-    String remotePath
+    String name
+    String from
+    String to
     String beforeUpload
     String afterUpload
 
@@ -18,24 +15,24 @@ class UploadConfig {
         this.name = name
     }
 
-    void podName(String podName) {
-        this.podName = podName
+    String getToApp() {
+        return StrUtil.subBefore(to, ':', false)
     }
 
-    void deployName(String deployName) {
-        this.deployName = deployName
+    String getToPath() {
+        return StrUtil.subAfter(to, ':', false)
     }
 
-    void containerName(String containerName) {
-        this.containerName = containerName
+    void from(String local) {
+        this.from = local
     }
 
-    void localPath(String localPath) {
-        this.localPath = localPath
+    void from(File local) {
+        this.from = local.canonicalPath
     }
 
-    void remotePath(String remotePath) {
-        this.remotePath = remotePath
+    void to(String remote) {
+        this.to = remote
     }
 
     void beforeUpload(String beforeUpload) {
@@ -47,14 +44,11 @@ class UploadConfig {
     }
 
     def validate() {
-        if (StrUtil.isAllBlank(deployName, podName)) {
-            throw new GradleException("should define one of deployName,podName for the upload file $name")
+        if (StrUtil.isBlank(to) || to.count(':') != 1) {
+            throw new GradleException("should define to path with format in the $name : appName:path")
         }
-        if (StrUtil.hasBlank(localPath, remotePath)) {
-            throw new GradleException("localPath or remotePath not define for the upload file $name")
-        }
-        if (!FileUtil.exist(localPath)) {
-            throw new GradleException("$localPath not exist")
+        if (StrUtil.hasBlank(from) || !FileUtil.exist(from)) {
+            throw new GradleException("localpath not defined or invalid in the $name")
         }
     }
 }

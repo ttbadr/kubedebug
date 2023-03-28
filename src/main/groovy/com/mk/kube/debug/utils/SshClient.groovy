@@ -64,23 +64,34 @@ class SshClient {
 
         //cp file from temp to pod
         logger.lifecycle("kubectl cp file from $temp to $remote")
-        kubectlCopy(ssh, "kubectl cp $temp $podName:$remote -n ${pod.metadata.namespace} && rm -rf $temp")
+        exec("kubectl cp $temp $podName:$remote -n ${pod.metadata.namespace} && rm -rf $temp")
     }
 
-    def kubectlCopy(SSHClient ssh, String cmd, retry = 3) {
+    def exec(String cmd, retry = 3) {
+        def result = ''
         ssh.startSession().withCloseable {
-            def exec = it.exec(cmd)
-            exec.join(8, TimeUnit.MINUTES)
-            if (exec.exitStatus != 0) {
+            def command = it.exec(cmd)
+            command.join(8, TimeUnit.MINUTES)
+            if (command.exitStatus != 0) {
                 if (retry > 0) {
-                    logger.error(IOUtils.readFully(exec.getErrorStream()).toString())
-                    logger.lifecycle("kubectl cp failed, retry...")
-                    kubectlCopy(ssh, cmd, retry - 1)
+                    logger.lifecycle("retry to command cmd in master node: $cmd")
+                    exec(cmd, retry - 1)
                 } else {
-                    throw new GradleException("kubectl cp file failed. exit code $exec.exitStatus, ${IOUtils.readFully(exec.getErrorStream()).toString()}")
+                    throw new GradleException("fail to command cms in master node, exit code $command.exitStatus.\n$cmd\n${IOUtils.readFully(command.getErrorStream()).toString()}")
                 }
+            } else {
+                result = IOUtils.readFully(command.getInputStream()).toString()
             }
         }
+        return result
+    }
+
+    def kubeCopy(String from, String to, String namespace) {
+        return exec("kubectl cp $from $to -n $namespace")
+    }
+
+    def listFolder(String folder) {
+        return exec("find ${folder} -maxdepth 1 -type f -exec basename {} \\;").readLines()
     }
 
     def upload(String src, String target) throws IOException {

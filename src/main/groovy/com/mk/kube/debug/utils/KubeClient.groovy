@@ -100,20 +100,20 @@ class KubeClient {
     }
 
     def copy(Pod pod, UploadConfig uploadFile) {
-        def local = new File(uploadFile.localPath)
+        def local = new File(uploadFile.from)
         boolean dir = local.isDirectory()
 
         ContainerResource container = k8sClient.pods().withName(pod.metadata.name)
-                .inContainer(getContainerName(uploadFile.containerName, pod))
+                .inContainer(pod.spec.containers.first().name)
 
-        def podPath = PathUtil.genDestPath(uploadFile.localPath, uploadFile.remotePath)
+        def podPath = PathUtil.genDestPath(uploadFile.from, uploadFile.toPath)
         CopyOrReadable selector
         if (dir) {
             selector = container.dir(podPath)
         } else {
             selector = container.file(podPath)
         }
-        logger.lifecycle("start to upload $uploadFile.localPath to $pod.metadata.name:$podPath")
+        logger.lifecycle("start to upload $uploadFile.from to $pod.metadata.name:$podPath")
         if (selector.upload(local.toPath())) {
             logger.lifecycle("upload success")
         } else {
@@ -121,13 +121,17 @@ class KubeClient {
         }
     }
 
-    String exec(String podName, String containerName, int timeout, String cmd) {
+    def exist(String podName, String filePath) {
+        return exec(podName, "[[ -e $filePath ]] && echo y || echo n") == 'y'
+    }
+
+    String exec(String podName, String containerName = '', int timeout = 10, String cmd) {
         CountDownLatch execLatch = new CountDownLatch(1)
         ByteArrayOutputStream out = new ByteArrayOutputStream()
         ByteArrayOutputStream error = new ByteArrayOutputStream()
         try {
             ExecWatch execWatch = k8sClient.pods().withName(podName)
-                    .inContainer(containerName)
+                    .inContainer(getContainerName(podName, containerName))
                     .writingOutput(out)
                     .writingError(error)
                     .usingListener(new PodExecListener(execLatch, logger))
@@ -158,8 +162,16 @@ class KubeClient {
         return k8sClient.pods().withName(name).get()
     }
 
-    Pod getRunningPodByLabel(String name, String value) {
-        return k8sClient.pods().withLabel(name, value).list().getItems().find { it.getStatus().getPhase() == 'Running' }
+    Pod getPodByAppName(String appName) {
+        return getRunningPodByLabel('app', appName)
+    }
+
+    private Pod getRunningPodByLabel(String name, String value) {
+        def find = k8sClient.pods().withLabel(name, value).list().getItems().find { it.getStatus().getPhase() == 'Running' }
+        if (find == null) {
+            throw new GradleException("could not find pod by deploy name $value")
+        }
+        return find
     }
 
     Service getService(String name) {
@@ -170,7 +182,16 @@ class KubeClient {
         k8sClient.apps().deployments().withName(name).scale(replica)
     }
 
-    static String getContainerName(String name, Pod pod) {
-        return StrUtil.isNotBlank(name) ? name : pod.getSpec().getContainers().get(0).getName()
+    String getContainerName(String podName, String name = '') {
+        def pod = k8sClient.pods().withName(podName).get()
+        def containers = pod.getSpec().getContainers()
+        if (StrUtil.isBlank(name)) {
+            logger.debug("not specify container for the pod ${podName}, use first contianer ${containers.first().name}")
+        } else if (containers.contains(name)) {
+            return name
+        } else {
+            logger.debug("not found container $name in the pod ${podName}, use first contianer ${containers.first().name}")
+        }
+        return containers.first().name
     }
 }

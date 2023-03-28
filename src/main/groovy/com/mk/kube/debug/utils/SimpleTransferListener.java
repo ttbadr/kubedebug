@@ -33,6 +33,7 @@ public class SimpleTransferListener implements TransferListener {
         private final long size;
         private long lastPrintTime = 0;
         private long lastPercent = 0;
+        private boolean complete = false;
 
         public CopyListener(String name, long size) {
             this.name = name;
@@ -41,12 +42,15 @@ public class SimpleTransferListener implements TransferListener {
 
         @Override
         public void reportProgress(long transferred) {
-            if (size <= 0) {
+            if (size <= 0 || complete) {
                 return;
             }
             long percent = (transferred * 100) / size;
+            if (percent == 100) {
+                complete = true;
+            }
             long now = System.currentTimeMillis();
-            if (now - lastPrintTime > 6000 && percent - lastPercent >= 1) {
+            if (complete || (now - lastPrintTime > 6000 && percent - lastPercent >= 1)) {
                 lastPrintTime = now;
                 log.lifecycle("transferred {}% of `{}`", percent, name);
             }
