@@ -52,7 +52,7 @@ public class SimpleTransferListener implements TransferListener {
             long now = System.currentTimeMillis();
             if (complete || (now - lastPrintTime > 6000 && percent - lastPercent >= 1)) {
                 lastPrintTime = now;
-                log.lifecycle("transferred {}% of `{}`", percent, name);
+                log.lifecycle("`{}` transferred {}%", name, percent);
             }
             lastPercent = percent;
         }

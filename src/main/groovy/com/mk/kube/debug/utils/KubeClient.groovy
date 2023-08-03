@@ -125,7 +125,7 @@ class KubeClient {
         return exec(podName, "[[ -e $filePath ]] && echo y || echo n") == 'y'
     }
 
-    String exec(String podName, String containerName = '', int timeout = 10, String cmd) {
+    String exec(String podName, String containerName = '', int timeout = 30, String cmd) {
         CountDownLatch execLatch = new CountDownLatch(1)
         ByteArrayOutputStream out = new ByteArrayOutputStream()
         ByteArrayOutputStream error = new ByteArrayOutputStream()
