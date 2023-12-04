@@ -2,9 +2,10 @@ plugins {
     id 'groovy'
     id 'maven-publish'
     id 'java-gradle-plugin'
+    id "com.gradle.plugin-publish" version "1.2.1"
 }
 
-group 'com.mk.kube'
+group 'com.toby.kube'
 version '0.6.1'
 
 repositories {
@@ -14,7 +15,7 @@ repositories {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
-    implementation 'io.fabric8:kubernetes-client:6.4.1'
+    implementation 'io.fabric8:kubernetes-client:6.9.2'
     implementation 'cn.hutool:hutool-core:5.8.11'
     implementation 'commons-codec:commons-codec:1.15'
     implementation 'org.apache.commons:commons-compress:1.21'
@@ -42,19 +43,22 @@ publishing {
     repositories {
         maven {
             credentials {
-                username 'cms'
-                password 'cms1234'
+                username 'xxx'
+                password 'xxx'
             }
-            url 'http://la-nexus.tandbergtv.lan:8081/repository/cms'
+            url 'xxx'
         }
     }
 }
 
 gradlePlugin {
+    website = 'https://github.com/ttbadr/kubedebug'
     plugins {
         kubeDebug {
-            id = 'com.mk.kube.debug'
-            implementationClass = 'com.mk.kube.debug.KubeDebugPlugin'
+            id = 'com.toby.kube.debug'
+            displayName = 'KubeDebug Gradle Plugin'
+            description = 'A plugin use to deploy and debug java application in kubernetes cluster'
+            implementationClass = 'com.toby.kube.debug.KubeDebugPlugin'
         }
     }
 }

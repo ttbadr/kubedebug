@@ -1,4 +1,4 @@
-package com.mk.kube.debug.config
+package com.toby.kube.debug.config
 
 class DeployConfig {
     String name

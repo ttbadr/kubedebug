@@ -1,4 +1,4 @@
-package com.mk.kube.debug
+package com.toby.kube.debug
 
 import io.fabric8.kubernetes.client.dsl.ExecListener
 import org.slf4j.Logger

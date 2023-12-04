@@ -7,6 +7,8 @@ Kube debug plugin feature
 * upload file to a pod
 * restart deployment
 * edit a deployment to debug java application
+* path ear/war/zip file in the pod
+* gradle version must >= 4.10.3
 
 ## Usage
 
@@ -16,17 +18,17 @@ Kube debug plugin feature
 buildscript {
     repositories {
         maven {
-            url http://la-nexus.tandbergtv.lan:8081/repository/cms
+            url 'custom maven repo'
         }
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.mk.kube:KubeDebug:0.6.1'
+        classpath 'com.toby.kube:KubeDebug:0.6.1'
     }
 }
 
-apply plugin: 'com.mk.kube.debug'
+apply plugin: 'com.toby.kube.debug'
 ```
 
 ### config plugin
@@ -37,26 +39,26 @@ kubeDebug {
     dependsOn build
 
     k8s {
-        host '10.116.53.141'
+        host '127.0.0.1'
     }
 
     uploads {
-        cms {
-            from file('build/libs/cms.ear')
-            to 'cms-config:/opt/tandbergtv/cms/plugins/jboss-deployments/'
+        foo {
+            from file('build/libs/foo.ear')
+            to 'foo-config:/path/in/pod/'
         }
     }
 
     zipPatch {
-        src 'cms-metadata-manager:/opt/tandbergtv/jboss/standalone/deployments/cms.ear'
-        to 'cms-config:/opt/tandbergtv/cms/plugins/jboss-deployments/cms.ear'
+        src 'app-pod:/path/foo.ear'
+        to 'foo-config:/path/foo.ear'
         patch([
-                (file('../com.tandbergtv.watchpoint.title/build/libs/com.tandbergtv.watchpoint.title-10.2.000.0.jar')): 'lib',
+                (file('../foo/build/libs/tet.jar')): 'lib',
         ])
     }
 
     deployment {
-        name 'cms-metadata-manager'
+        name 'deploy-name'
         debug false
         restore false
     }
@@ -77,10 +79,10 @@ kubeDebug {
 ```groovy
 k8s {
     host //k8s master node address
-    port = 6443 //k8s api server port, default 6443
-    user = 'mdt-admin' //k8s api server user, default mdt-admin
-    passwd = 'youmustchangeme' //k8s api server passwd, default youmustchangeme
-    namespace = 'mkcms' //k8s namespace, default mkcms
+    sshPort //k8s master node ssh port, default 22
+    sshUser //k8s master node ssh user name
+    sshPasswd //k8s master node ssh password
+    namespace //k8s namespace, default namespace is default
 }
 ```
 

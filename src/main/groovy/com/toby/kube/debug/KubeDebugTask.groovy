@@ -1,16 +1,16 @@
-package com.mk.kube.debug
+package com.toby.kube.debug
 
 import cn.hutool.core.io.FileUtil
 import cn.hutool.core.io.file.FileNameUtil
 import cn.hutool.core.net.NetUtil
 import cn.hutool.core.util.StrUtil
-import com.mk.kube.debug.config.DeployConfig
-import com.mk.kube.debug.config.K8sConfig
-import com.mk.kube.debug.config.UploadConfig
-import com.mk.kube.debug.config.ZipPatch
-import com.mk.kube.debug.utils.KubeClient
-import com.mk.kube.debug.utils.PathUtil
-import com.mk.kube.debug.utils.SshClient
+import com.toby.kube.debug.config.K8sConfig
+import com.toby.kube.debug.config.DeployConfig
+import com.toby.kube.debug.config.UploadConfig
+import com.toby.kube.debug.config.ZipPatch
+import com.toby.kube.debug.utils.KubeClient
+import com.toby.kube.debug.utils.PathUtil
+import com.toby.kube.debug.utils.SshClient
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.client.utils.Serialization
 import org.gradle.api.*
@@ -58,7 +58,6 @@ class KubeDebugTask extends DefaultTask {
 
     @TaskAction
     private void run() {
-        validate()
         init()
 
         uploadFiles()
@@ -194,14 +193,9 @@ class KubeDebugTask extends DefaultTask {
         }
     }
 
-    private def validate() {
-        if (StrUtil.isBlank(k8sConfig.host)) {
-            throw new GradleException("should specify k8s ${k8sConfig.host}")
-        }
-    }
-
     private def init() {
-        sshClient = new SshClient(k8sConfig.host)
+        k8sConfig.validate()
+        sshClient = new SshClient(k8sConfig.host, k8sConfig.sshUser, k8sConfig.sshPasswd, k8sConfig.sshPort)
         k8sClient = new KubeClient(getKubeConfig(), k8sConfig.namespace)
 
         Path.metaClass.toUnixPath = { -> return delegate.toString().replace('\\', '/') }
@@ -246,13 +240,12 @@ class KubeDebugTask extends DefaultTask {
             k8sClient.exec(pod.metadata.name, uploadFile.beforeUpload)
         }
 
-        //if file lower than 20M then kubeCopy, scp otherwise
-        if (FileUtil.size(new File(uploadFile.from)) <= 20971520) {
-            k8sClient.copy(pod, uploadFile)
-        } else {
+        if(uploadFile.transitMode){
             def parent = PathUtil.getParent(podPath)
             k8sClient.exec(pod.metadata.name, "[ ! -e $parent ] && mkdir -p $parent")
             sshClient.scp(pod, uploadFile.from, podPath)
+        } else {
+            k8sClient.copy(pod, uploadFile)
         }
 
         if (StrUtil.isNotBlank(uploadFile.afterUpload)) {

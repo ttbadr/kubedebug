@@ -1,4 +1,4 @@
-package com.mk.kube.debug.config
+package com.toby.kube.debug.config
 
 import cn.hutool.core.io.file.FileNameUtil
 import cn.hutool.core.util.StrUtil

@@ -1,4 +1,4 @@
-package com.mk.kube.debug.config
+package com.toby.kube.debug.config
 
 import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer

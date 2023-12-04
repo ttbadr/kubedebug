@@ -1,4 +1,4 @@
-package com.mk.kube.debug.utils;
+package com.toby.kube.debug.utils;
 
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.xfer.TransferListener;

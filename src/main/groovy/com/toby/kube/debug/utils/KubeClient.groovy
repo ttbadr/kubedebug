@@ -1,9 +1,9 @@
-package com.mk.kube.debug.utils
+package com.toby.kube.debug.utils
 
 import cn.hutool.core.util.StrUtil
-import com.mk.kube.debug.PodExecListener
-import com.mk.kube.debug.config.DeployConfig
-import com.mk.kube.debug.config.UploadConfig
+import com.toby.kube.debug.PodExecListener
+import com.toby.kube.debug.config.DeployConfig
+import com.toby.kube.debug.config.UploadConfig
 import io.fabric8.kubernetes.api.model.*
 import io.fabric8.kubernetes.api.model.apps.Deployment
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder

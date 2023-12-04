@@ -1,4 +1,4 @@
-package com.mk.kube.debug
+package com.toby.kube.debug
 
 
 import org.gradle.api.Plugin

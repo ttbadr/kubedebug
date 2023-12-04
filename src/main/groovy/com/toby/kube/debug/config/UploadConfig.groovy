@@ -1,4 +1,4 @@
-package com.mk.kube.debug.config
+package com.toby.kube.debug.config
 
 import cn.hutool.core.io.FileUtil
 import cn.hutool.core.util.StrUtil
@@ -10,6 +10,7 @@ class UploadConfig {
     String to
     String beforeUpload
     String afterUpload
+    boolean transitMode = false
 
     UploadConfig(String name) {
         this.name = name
@@ -41,6 +42,10 @@ class UploadConfig {
 
     void afterUpload(String afterUpload) {
         this.afterUpload = afterUpload
+    }
+
+    void transitMode(boolean mode) {
+        this.transitMode = mode
     }
 
     def validate() {

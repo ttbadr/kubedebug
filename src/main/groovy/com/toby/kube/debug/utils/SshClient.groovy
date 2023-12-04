@@ -1,4 +1,4 @@
-package com.mk.kube.debug.utils
+package com.toby.kube.debug.utils
 
 import cn.hutool.core.io.FileUtil
 import cn.hutool.core.io.file.FileNameUtil
@@ -17,29 +17,35 @@ class SshClient {
     private static final Logger logger = Logging.getLogger(SshClient)
     private final SSHClient ssh
     private final String host
+    private final String user
+    private final String passwd
+    private final int port
 
-    SshClient(String host) {
+    SshClient(String host, String user, String passwd, int port) {
         ssh = new SSHClient()
         ssh.addHostKeyVerifier(new HostKeyVerifier() {
             @Override
-            boolean verify(String hostname, int port, PublicKey key) {
+            boolean verify(String hostname, int p, PublicKey key) {
                 return true
             }
 
             @Override
-            List<String> findExistingAlgorithms(String hostname, int port) {
+            List<String> findExistingAlgorithms(String hostname, int p) {
                 return Collections.emptyList()
             }
         })
         this.host = host
+        this.user = user
+        this.passwd = passwd
+        this.port = port
     }
 
     private def checkConnection() {
         if (!ssh.isConnected()) {
-            ssh.connect(host)
+            ssh.connect(host, port)
         }
         if (!ssh.isAuthenticated()) {
-            ssh.authPassword('root', 'root1234')
+            ssh.authPassword(user, passwd)
         }
     }
 
@@ -74,10 +80,10 @@ class SshClient {
             command.join(8, TimeUnit.MINUTES)
             if (command.exitStatus != 0) {
                 if (retry > 0) {
-                    logger.lifecycle("retry to command cmd in master node: $cmd")
+                    logger.lifecycle("retry to exec cmd in master node: $cmd")
                     exec(cmd, retry - 1)
                 } else {
-                    throw new GradleException("fail to command cms in master node, exit code $command.exitStatus.\n$cmd\n${IOUtils.readFully(command.getErrorStream()).toString()}")
+                    throw new GradleException("fail to exec cmd in master node, exit code $command.exitStatus.\n$cmd\n${IOUtils.readFully(command.getErrorStream()).toString()}")
                 }
             } else {
                 result = IOUtils.readFully(command.getInputStream()).toString()
